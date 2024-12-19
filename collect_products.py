@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from math import inf
 
@@ -34,7 +35,7 @@ class CollectProducts:
         else:
             return inf, None
 
-    def create_products_dict(self) -> list:
+    async def create_products_dict(self) -> list:
         """
         Scrape products from the website.
 
@@ -47,7 +48,7 @@ class CollectProducts:
         while current_page < self.page_count + 1:
             try:
                 print(f"Started parsing page {current_page}")
-                current_page_products = self.scraper.get_products_of_the_page(current_page)
+                current_page_products = await self.scraper.get_products_of_the_page(current_page)
                 if current_page_products:
                     products.extend(current_page_products)
                 else:
@@ -60,7 +61,6 @@ class CollectProducts:
             current_page += 1
 
         print("Website parsing completed!")
-        print(f"Open {PRODUCTS_FILE_NAME} file to see the results")
         return products
 
     def save_products(self, products: list):
@@ -72,7 +72,6 @@ class CollectProducts:
         """
         try:
             Storage().write_products(products)
-            print(f"Products successfully saved to {PRODUCTS_FILE_NAME}")
         except Exception as e:
             print(f"Error occurred while saving products: {e}")
 
@@ -80,8 +79,9 @@ class CollectProducts:
 if __name__ == '__main__':
     page_count, proxy = CollectProducts.get_arguments()
     collect_products = CollectProducts(page_count=page_count, proxy=proxy)
-    products = collect_products.create_products_dict()
+    products = asyncio.run(collect_products.create_products_dict())
     if products:
         collect_products.save_products(products)
+        print(f"{len(products)} products were scraped.")
     else:
         print("No products were scraped.")

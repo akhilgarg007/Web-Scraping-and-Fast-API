@@ -17,11 +17,11 @@ class Product(BaseModel):
                             with one of the specified extensions (jpg, jpeg, png, gif, bmp, webp).
     """
 
-    name: str
-    price: float
-    image: str
+    product_title: str
+    product_price: int
+    path_to_image: str
 
-    @field_validator("image")
+    @field_validator("path_to_image")
     def validate_image_url(cls, image_url):
         if image_url:
             # Regular expression to check if URL ends with valid image file extensions

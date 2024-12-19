@@ -7,6 +7,7 @@ This project is a web scraping tool designed to extract product data from the we
 - FastAPI for building the API endpoints.
 - BeautifulSoup for scraping and parsing HTML content.
 - Pipenv for managing project dependencies.
+- Docker and Docker Compose for containerization and orchestration.
 
 ## Features:
 - Scrapes product details (name, price, image) from [https://dentalstall.com/](https://dentalstall.com/).
@@ -14,21 +15,15 @@ This project is a web scraping tool designed to extract product data from the we
 - FastAPI endpoints to retrieve scraped product data.
 
 ## Prerequisites
-Before running the project, ensure that Pipenv is installed. If not, install it via:
+Before running the project, ensure that Docker and Docker Compose are installed on your machine. You can download them from the official Docker website: [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/).:
 
-```bash
-pip install pipenv
-```
 ## Installation
 - Clone the repository and navigate to the project folder.
-- Make a new pipenv:
+- Build the services using Docker Compose::
 ```bash
-pipenv shell
+docker-compose build
 ```
-- Install dependencies with Pipenv:
-```bash
-pipenv install
-```
+
 ## Running the Project
 **1. Scrape the Product Data**
 Run the collect_products.py file to scrape product data from https://dentalstall.com/ and save it to a JSON file:
@@ -39,19 +34,20 @@ Run the collect_products.py file to scrape product data from https://dentalstall
 
     - To scrape the first 5 pages without a proxy:
     ```bash
-    python collect_products.py 5
+    docker-compose run app pipenv run python collect_products.py 5
     ```
     - To scrape the first 5 pages using a proxy:    
     ```bash
-    python collect_products.py 5 http://myproxy.com
+    docker-compose run app pipenv run python collect_products.py 5 http://myproxy.com
     ```
 The scraped data will be saved to a JSON file named products.json.
 **2. Start the FastAPI Application**
 After collecting the products, run the FastAPI server using Uvicorn:
 ```bash
-uvicorn main:app --reload
+docker-compose up
 ```
 This will start the FastAPI server, and you can access the API at http://127.0.0.1:8000/.
 
 **Available Endpoints:**
 - /products: Retrieve a list of all scraped products.
+- /redis_test: Test the redis connection using set and get

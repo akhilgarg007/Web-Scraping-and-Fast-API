@@ -3,8 +3,8 @@ from typing import List, Dict, Optional
 from bs4 import BeautifulSoup
 import requests
 
-from constants import BASE_URL
-from decorators import retry_on_failure
+from constants import BASE_URL, TOKEN
+from decorators import cached_result_decorator, retry_on_failure
 from serializers import Product
 
 
@@ -30,6 +30,7 @@ class Scraper:
         """
         return f"{BASE_URL}/{page}/"
 
+    @cached_result_decorator(expiry=3600)
     @retry_on_failure(max_attempts=3, retry_delay=1)
     def get_page(self, url: str) -> BeautifulSoup:
         """
@@ -43,7 +44,9 @@ class Scraper:
         """
         proxies = {"https": self.proxy} if self.proxy else None
         try:
-            response = requests.get(url, proxies=proxies, timeout=10)
+            response = requests.get(
+                url, proxies=proxies, timeout=10, headers={'Authorization': f'Bearer {TOKEN}'}
+            )
             if response.status_code == 404:
                 print(f"Page not found (404): {url}. Stopping scraping.")
                 return BeautifulSoup()
@@ -52,7 +55,7 @@ class Scraper:
             raise Exception(f"Failed to fetch page {url}: {e}")
         return BeautifulSoup(response.content, "html.parser")
 
-    def get_products_of_the_page(self, page: int) -> List[Dict[str, str]]:
+    async def get_products_of_the_page(self, page: int) -> List[Dict[str, str]]:
         """
         Extract product details (name, price, and image URL) from a given page.
         
@@ -63,12 +66,14 @@ class Scraper:
             List[Dict[str, str]]: A list of dictionaries with product details.
         """
         url = self.generate_url(page)
-        page_content = self.get_page(url)
+        page_content = await self.get_page(url)
         raw_products = page_content.find_all("div", class_="product-inner")
 
         products = []
         for product in raw_products:
-            products.append(dict(self._extract_product_details(product)))
+            extracted_product = dict(self._extract_product_details(product))
+            if extracted_product:
+                products.append(extracted_product)
 
         return products
 
@@ -94,9 +99,13 @@ class Scraper:
         # Extract product image URL
         image_tag = product.find(class_="mf-product-thumbnail").find("img")
         image = image_tag.get("data-lazy-src") or image_tag.get("src") if image_tag else ""
-
-        return Product(**{
-            "name": name,
-            "price": price,
-            "image": image,
-        })
+        product_dict = {
+            "product_title": name,
+            "product_price": price,
+            "path_to_image": image,
+        }
+        try:       
+            return Product(**product_dict)
+        except Exception as e:
+            print(f'An error occurred while parsing product {e} product_data:{product_dict}')
+            return {}
