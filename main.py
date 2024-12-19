@@ -1,24 +1,36 @@
-from fastapi import FastAPI
-import services as _services
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
-app = FastAPI()
+from storage import Storage
 
-@app.get("/")
+app = FastAPI(
+    title="Products API",
+    description="API for managing and retrieving product information.",
+    version="1.0.0"
+)
+
+# Initialize storage
+storage = Storage()
+
+@app.get("/", tags=["Root"])
 async def root():
-    return {"message": "Welcome to the Historical events FastAPI"}
+    """
+    Root endpoint to check the service status.
+    """
+    return {"message": "Welcome to the Products API"}
 
-@app.get("/events")
-async def all_events():
-    return _services.get_all_events()
+@app.get("/products", tags=["Products"])
+async def get_all_products():
+    """
+    Retrieve all products from the storage.
 
-@app.get("/events/today")
-async def todays_events():
-    return _services.get_all_today_events()
-
-@app.get("/events/{month}")
-async def month_events(month: str):
-    return _services.get_all_month_events(month)
-
-@app.get("/events/{month}/{day}")
-async def day_events(month: str, day: int):
-    return _services.get_all_day_events(month,day)
+    Returns:
+        List[Dict[str, Any]]: A list of all products stored in the system.
+    """
+    try:
+        products = storage.get_all_products()
+        if not products:
+            raise HTTPException(status_code=404, detail="No products found.")
+        return JSONResponse(content={"products": products})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving products: {str(e)}")

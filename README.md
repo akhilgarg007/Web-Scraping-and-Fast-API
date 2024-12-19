@@ -1,28 +1,57 @@
-# Web Scraping Project with Fast API
-## A Web scraping project to scrape the data from the websites which doesn't require login.<br/>
-Beautiful Soup library is used for extracting my response data. It creates a parse tree from page source code that can be used to extract data in a hierarchical and more readable manner, basically a Python library for pulling data out of HTML and XML files.<br/><br/>
-I have done scraping on this website: "https://www.onthisday.com"<br/>
-" On This Day " is the world's largest, most accurate and popular site for on this day in history, it gives all the historical events happened in a day wise frame.<br/>
-I have scrap the whole bunch of data of all days, filtered it in month wise frame and stored it in json file.<br/>
-Using Fast API, have assigned endpoints for displaying historical events of today's date, month wise events, a particular day and month event and more...<br/>
-It's a basic demo, just for understanding purpose.<br/>
-You can use this code to scrap any website data which doesn't requires login.<br/><br/>
-### Do these installs before running the project,<br/>
-> pip install beautifulsoup4
+# Web Scraping Project with FastAPI
 
-If anyone got any module error, then install that module like<br/>
-> pip install module_name
+## Overview
+This project is a web scraping tool designed to extract product data from the website [https://dentalstall.com/](https://dentalstall.com/). It doesn't require login credentials and uses Beautiful Soup to parse HTML content and extract product details such as the product name, price, and image.
 
-### For accessing Fast API, run collect_events.py file first ( for creating events.json file ):
-> python collect_events.py<br/>
-> uvicorn main:app --reload
+## Technologies Used:
+- FastAPI for building the API endpoints.
+- BeautifulSoup for scraping and parsing HTML content.
+- Pipenv for managing project dependencies.
 
-Then go to the respective url( Ex: http://127.0.0.1:8000/ ), for a better view just add "docs" or "redoc" to your url. ( Ex: http://127.0.0.1:8000/docs or http://127.0.0.1:8000/redoc ) and explore it.
+## Features:
+- Scrapes product details (name, price, image) from [https://dentalstall.com/](https://dentalstall.com/).
+- Data is stored in a JSON file for easy access.
+- FastAPI endpoints to retrieve scraped product data.
 
-### Reference <br/>
+## Prerequisites
+Before running the project, ensure that Pipenv is installed. If not, install it via:
 
-1). https://beautiful-soup-4.readthedocs.io/ <br/>
-2). https://www.onthisday.com/<br/>
-3). https://fastapi.tiangolo.com/
+```bash
+pip install pipenv
+```
+## Installation
+- Clone the repository and navigate to the project folder.
+- Make a new pipenv:
+```bash
+pipenv shell
+```
+- Install dependencies with Pipenv:
+```bash
+pipenv install
+```
+## Running the Project
+**1. Scrape the Product Data**
+Run the collect_products.py file to scrape product data from https://dentalstall.com/ and save it to a JSON file:
+    - page_count: The number of pages to scrape (default is to scrape all pages).
+    - proxy: A proxy URL for scraping (optional)
 
-#### For any doubts, raise your issues, willingly waiting to help you and clear your doubts...
+-   Example usage:
+
+    - To scrape the first 5 pages without a proxy:
+    ```bash
+    python collect_products.py 5
+    ```
+    - To scrape the first 5 pages using a proxy:    
+    ```bash
+    python collect_products.py 5 http://myproxy.com
+    ```
+The scraped data will be saved to a JSON file named products.json.
+**2. Start the FastAPI Application**
+After collecting the products, run the FastAPI server using Uvicorn:
+```bash
+uvicorn main:app --reload
+```
+This will start the FastAPI server, and you can access the API at http://127.0.0.1:8000/.
+
+**Available Endpoints:**
+- /products: Retrieve a list of all scraped products.

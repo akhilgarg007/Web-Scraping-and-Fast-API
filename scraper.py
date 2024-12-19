@@ -1,24 +1,102 @@
-from typing import List
-import requests as _requests
-import bs4 as _bs4
+from typing import List, Dict, Optional
 
-def _generate_url(month: str, day: int) -> str:
-    url = f"https://www.onthisday.com/day/{month}/{day}"
-    return url
+from bs4 import BeautifulSoup
+import requests
 
-def _get_page(url: str) -> _bs4.BeautifulSoup:
-    page = _requests.get(url)
-    soup = _bs4.BeautifulSoup(page.content, "html.parser")
-    return soup
+from constants import BASE_URL
+from decorators import retry_on_failure
+from serializers import Product
 
-def _events_of_the_day(month: str, day: int) -> List[str]:
-    """
-    To return events of a given particular day
-    """
-    url = _generate_url(month, day)
-    page = _get_page(url)
-    raw_events = page.find_all(class_="event")
-    events = [event.text for event in raw_events]
-    return events
 
-#_events_of_the_day("january", 1)
+class Scraper:
+    def __init__(self, proxy: Optional[str] = None):
+        """
+        Initialize the scraper with an optional proxy.
+        
+        Args:
+            proxy (Optional[str]): Proxy URL to be used for requests.
+        """
+        self.proxy = proxy
+
+    def generate_url(self, page: int) -> str:
+        """
+        Generate the URL for a specific page.
+        
+        Args:
+            page (int): The page number.
+        
+        Returns:
+            str: The full URL for the page.
+        """
+        return f"{BASE_URL}/{page}/"
+
+    @retry_on_failure(max_attempts=3, retry_delay=1)
+    def get_page(self, url: str) -> BeautifulSoup:
+        """
+        Fetch the content of the page using requests and parse it with BeautifulSoup.
+        
+        Args:
+            url (str): The URL to fetch.
+        
+        Returns:
+            BeautifulSoup: Parsed HTML content of the page.
+        """
+        proxies = {"https": self.proxy} if self.proxy else None
+        try:
+            response = requests.get(url, proxies=proxies, timeout=10)
+            if response.status_code == 404:
+                print(f"Page not found (404): {url}. Stopping scraping.")
+                return BeautifulSoup()
+            response.raise_for_status()  # Raise HTTPError for bad responses
+        except requests.RequestException as e:
+            raise Exception(f"Failed to fetch page {url}: {e}")
+        return BeautifulSoup(response.content, "html.parser")
+
+    def get_products_of_the_page(self, page: int) -> List[Dict[str, str]]:
+        """
+        Extract product details (name, price, and image URL) from a given page.
+        
+        Args:
+            page (int): The page number to scrape.
+        
+        Returns:
+            List[Dict[str, str]]: A list of dictionaries with product details.
+        """
+        url = self.generate_url(page)
+        page_content = self.get_page(url)
+        raw_products = page_content.find_all("div", class_="product-inner")
+
+        products = []
+        for product in raw_products:
+            products.append(dict(self._extract_product_details(product)))
+
+        return products
+
+    @staticmethod
+    def _extract_product_details(product: BeautifulSoup) -> Product:
+        """
+        Extract details (name, price, and image URL) from a product element.
+        
+        Args:
+            product (BeautifulSoup): The product HTML element.
+        
+        Returns:
+            Dict[str, str]: A dictionary containing product details.
+        """
+        # Extract product name
+        name_tag = product.find("h2", class_="woo-loop-product__title")
+        name = name_tag.text.strip() if name_tag else "Unknown"
+
+        # Extract product price
+        price_tag = product.find("ins") or product.find("span", class_="woocommerce-Price-amount")
+        price = price_tag.text.strip().strip('\u20b9') if price_tag else "Price not available"
+
+        # Extract product image URL
+        image_tag = product.find(class_="mf-product-thumbnail").find("img")
+        image = image_tag.get("data-lazy-src") or image_tag.get("src") if image_tag else ""
+
+        return Product(**{
+            "name": name,
+            "price": price,
+            "image": image,
+        })
